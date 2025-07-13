@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🧠 Нейрошифратор ∞</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #ffffff; /* Белый фон */
+            color: #000000; /* Чёрный текст */
+            padding: 2rem;
+            margin: 0;
+            overflow: hidden; /* Скрываем прокрутку для холста */
+            position: relative;
+        }
+        /* Стили для холста матрицы */
+        #matrixCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; /* Помещаем за содержимым */
+            opacity: 0.1; /* Немного прозрачности для фона */
+        }
+        .content-wrapper {
+            position: relative;
+            z-index: 1; /* Поверх холста */
+            background: #ffffff; /* Белый фон для содержимого */
+            padding: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2); /* Небольшая тень для выделения */
+            box-sizing: border-box;
+            height: 100vh; /* Заполняем всю высоту */
+            overflow-y: auto; /* Скролл для содержимого, если оно не помещается */
+        }
+
+        input, textarea, button, select {
+            background: #1a1a1a; /* Тёмные поля ввода */
+            color: #ffffff; /* Белый текст в полях */
+            border: 1px solid #000000; /* Чёрная рамка */
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button {
+            cursor: pointer;
+            background: #000000; /* Чёрные кнопки */
+            color: #ffffff; /* Белый текст на кнопках */
+            border: 1px solid #000000;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .section {
+            border: 1px solid #cccccc; /* Светлая рамка секций */
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+        .hidden {
+            display: none;
+        }
+        #dropzone {
+            border: 2px dashed #000000; /* Чёрная пунктирная рамка */
+            padding: 1rem;
+            text-align: center;
+            margin-bottom: 1rem;
+            color: #000000;
+        }
+        canvas {
+            max-width: 100%;
+            margin-top: 1rem;
+            border: 1px solid #cccccc;
+        }
+        h1, h2, h3 {
+            color: #000000; /* Чёрные заголовки */
+        }
+        label {
+            display: flex;
+            align-items: center;
+            margin: 0.5rem 0;
+        }
+        label input[type="checkbox"] {
+            width: auto;
+            margin-right: 0.5rem;
+            background: #ffffff;
+            border: 1px solid #000000;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+</head>
+<body>
+    <canvas id="matrixCanvas"></canvas>
+    <div class="content-wrapper">
+        <h1>🧠 Нейрошифратор ∞</h1>
+
+        <div class="section">
+            <h2>🔐 Режим</h2>
+            <select id="modeSelect" onchange="toggleMode()">
+                <option value="simple">Базовый</option>
+                <option value="dual">С прикрытием</option>
+                <option value="multi">Многоуровневый сейф</option>
+            </select>
+        </div>
+
+        <div id="simpleSection" class="section">
+            <h2>🔒 Базовое шифрование</h2>
+            <input type="text" id="phrase" placeholder="🔑 Нейрофраза" />
+            <input type="text" id="emo" placeholder="🎨 Эмо-код (напр. 🔥💧🌕)" />
+            <textarea id="message" rows="4" placeholder="✍ Сообщение"></textarea>
+            <button onclick="encryptSimple()">Зашифровать</button>
+            <textarea id="encrypted" rows="5" readonly placeholder="🔐 Зашифровано тут"></textarea>
+            <p id="simpleStatus" style="color: #007700;"></p>
+        </div>
+
+        <div id="dualSection" class="section hidden">
+            <h2>🎭 С прикрытием</h2>
+            <input type="text" id="realPhrase" placeholder="🔑 Настоящая нейрофраза" />
+            <input type="text" id="realEmo" placeholder="🎨 Эмо-код для настоящего" />
+            <textarea id="realMessage" rows="3" placeholder="✍ Настоящее сообщение"></textarea>
+            <input type="text" id="fakePhrase" placeholder="🔑 Фраза прикрытия" />
+            <input type="text" id="fakeEmo" placeholder="🎨 Эмо-код для прикрытия" />
+            <textarea id="fakeMessage" rows="3" placeholder="✍ Сообщение-прикрытие"></textarea>
+            <button onclick="encryptDual()">Зашифровать оба</button>
+            <button onclick="saveDualVault()">💾 Сохранить Vault</button>
+            <textarea id="dualVault" rows="7" readonly placeholder="🔐 Vault JSON"></textarea>
+            <p id="dualStatus" style="color: #007700;"></p>
+        </div>
+
+        <div id="multiSection" class="section hidden">
+            <h2>🌀 Многоуровневый сейф</h2>
+            <div id="layerContainer"></div>
+            <button onclick="addLayer()">➕ Добавить слой</button>
+            <button onclick="encryptMulti()">🔐 Зашифровать все слои</button>
+            <button onclick="saveMultiVault()">💾 Сохранить Vault</button>
+            <textarea id="multiVault" rows="8" readonly placeholder="📦 JSON-сейф"></textarea>
+            <p id="multiStatus" style="color: #007700;"></p>
+        </div>
+
+        <div class="section">
+            <h2>📂 Загрузить / Разшифровать Vault</h2>
+            <input type="file" id="vaultLoader" onchange="loadVaultFile(event)" />
+            <div id="dropzone" ondrop="dropVault(event)" ondragover="event.preventDefault()">
+                Перетащи сюда свой .vault.json файл 🧊
+            </div>
+            <label><input type="checkbox" id="autoDelete" /> 🔥 Удалить содержимое поля после расшифровки</label>
+            <textarea id="inputVault" rows="6" placeholder="📥 Вставь JSON-сейф или зашифрованный текст"></textarea>
+            <button onclick="decryptVault()">Расшифровать</button>
+            <div id="decryptionResult" style="white-space: pre-wrap; word-break: break-all; margin-top: 1rem; border: 1px dashed #000000; padding: 0.5rem;">
+                <p>Результат расшифровки появится здесь.</p>
+            </div>
+            <h3>📸 Создать QR для Vault</h3>
+            <button onclick="generateQR()">QR (темный)</button>
+            <button onclick="saveQRAsPNG()">💾 Сохранить QR</button>
+            <canvas id="qrcanvas"></canvas>
+            <p id="qrStatus" style="color: #007700;"></p>
+        </div>
+    </div>
+
+    <script>
+        // Matrix animation setup
+        const canvas = document.getElementById('matrixCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let W, H, particles;
+        const FONT_SIZE = 20;
+
+        const initMatrix = () => {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+            particles = [];
+            for (let i = 0; i < W / FONT_SIZE; i++) {
+                particles[i] = {
+                    x: i * FONT_SIZE,
+                    y: 0,
+                    text: String.fromCharCode(Math.random() * 94 + 33), // ASCII characters
+                    speed: Math.random() * FONT_SIZE * 0.5 + FONT_SIZE * 0.5 // Random speed
+                };
+            }
+        };
+
+        const drawMatrix = () => {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'; // Black background with transparency
+            ctx.fillRect(0, 0, W, H);
+
+            ctx.fillStyle = '#00FF00'; // Green text
+            ctx.font = `${FONT_SIZE}px monospace`;
+
+            for (let i = 0; i < particles.length; i++) {
+                let p = particles[i];
+                ctx.fillText(p.text, p.x, p.y);
+                p.y += p.speed;
+
+                if (p.y > H) {
+                    p.y = 0;
+                    p.text = String.fromCharCode(Math.random() * 94 + 33);
+                }
+            }
+        };
+
+        window.addEventListener('resize', initMatrix);
+        initMatrix();
+        setInterval(drawMatrix, 50);
+
+        // --- Crypto functions ---
+        // PBKDF2 parameters
+        const PBKDF2_ITERATIONS = 200000; // Высокое количество итераций для безопасности
+        const PBKDF2_HASH_ALG = 'SHA-256';
+        const KEY_LENGTH_BITS = 256; // 256 бит для AES-256
+
+        // Helper to display status messages
+        const displayStatus = (elementId, message, isError = false) => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.innerText = message;
+                element.style.color = isError ? '#FF0000' : '#007700';
+            }
+        };
+
+        // Generates a random salt for PBKDF2
+        const generateSalt = () => crypto.getRandomValues(new Uint8Array(16)); // 16 bytes = 128 bits
+
+        // Derives a key using PBKDF2
+        const deriveKey = async (phrase, emo, salt) => {
+            const combined = phrase + '::' + emo;
+            const passwordBuffer = new TextEncoder().encode(combined);
+            const saltBuffer = salt; // PBKDF2 expects Uint8Array for salt
+
+            const keyMaterial = await crypto.subtle.importKey(
+                'raw',
+                passwordBuffer,
+                { name: 'PBKDF2' },
+                false,
+                ['deriveKey']
+            );
+
+            const key = await crypto.subtle.deriveKey(
+                {
+                    name: 'PBKDF2',
+                    salt: saltBuffer,
+                    iterations: PBKDF2_ITERATIONS,
+                    hash: PBKDF2_HASH_ALG,
+                },
+                keyMaterial,
+                { name: 'AES-CBC', length: KEY_LENGTH_BITS },
+                false,
+                ['encrypt', 'decrypt']
+            );
+            return key;
+        };
+
+        // Encrypts text using AES-CBC
+        const aesEncrypt = async (text, phrase, emo) => {
+            if (!text || !phrase || !emo) {
+                throw new Error("Все поля (сообщение, нейрофраза, эмо-код) должны быть заполнены.");
+            }
+
+            const iv = crypto.getRandomValues(new Uint8Array(16)); // 16 bytes for IV
+            const salt = generateSalt();
+
+            try {
+                const cryptoKey = await deriveKey(phrase, emo, salt);
+                const encrypted = await crypto.subtle.encrypt(
+                    { name: 'AES-CBC', iv: iv },
+                    cryptoKey,
+                    new TextEncoder().encode(text)
+                );
+
+                // Combine salt, IV, and encrypted data for storage
+                // Use a header to indicate salt and IV length (e.g., 1 byte for salt_len, 1 byte for iv_len)
+                // For simplicity, we fix salt and IV to 16 bytes, so we just prepend them.
+                const combined = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
+                combined.set(salt, 0);
+                combined.set(iv, salt.length);
+                combined.set(new Uint8Array(encrypted), salt.length + iv.length);
+
+                return btoa(String.fromCharCode(...combined));
+            } catch (error) {
+                console.error("Ошибка шифрования:", error);
+                throw new Error("Ошибка шифрования: " + error.message);
+            }
+        };
+
+        // Decrypts text using AES-CBC
+        const aesDecrypt = async (encryptedDataB64, phrase, emo) => {
+            if (!encryptedDataB64 || !phrase || !emo) {
+                throw new Error("Все поля (зашифрованный текст, нейрофраза, эмо-код) должны быть заполнены.");
+            }
+
+            try {
+                const combinedBytes = Uint8Array.from(atob(encryptedDataB64), c => c.charCodeAt(0));
+                if (combinedBytes.length < 32) { // 16 bytes salt + 16 bytes IV
+                    throw new Error("Некорректный формат зашифрованных данных (слишком короткие).");
+                }
+
+                const salt = combinedBytes.slice(0, 16);
+                const iv = combinedBytes.slice(16, 32);
+                const encrypted = combinedBytes.slice(32);
+
+                const cryptoKey = await deriveKey(phrase, emo, salt);
+                const decrypted = await crypto.subtle.decrypt(
+                    { name: 'AES-CBC', iv: iv },
+                    cryptoKey,
+                    encrypted
+                );
+                return new TextDecoder().decode(decrypted);
+            } catch (error) {
+                console.error("Ошибка дешифрования:", error);
+                // Более общее сообщение для пользователя, чтобы не раскрывать детали атаки
+                return "⛔ Ошибка дешифрования: Неверная нейрофраза, эмо-код или поврежденные данные.";
+            }
+        };
+
+        // --- UI functions ---
+
+        const toggleMode = () => {
+            document.getElementById("simpleSection").classList.add("hidden");
+            document.getElementById("dualSection").classList.add("hidden");
+            document.getElementById("multiSection").classList.add("hidden");
+            const mode = document.getElementById("modeSelect").value;
+            if (mode === "simple") document.getElementById("simpleSection").classList.remove("hidden");
+            if (mode === "dual") document.getElementById("dualSection").classList.remove("hidden");
+            if (mode === "multi") document.getElementById("multiSection").classList.remove("hidden");
+        };
+
+        const encryptSimple = async () => {
+            displayStatus("simpleStatus", "");
+            const phrase = document.getElementById("phrase").value;
+            const emo = document.getElementById("emo").value;
+            const msg = document.getElementById("message").value;
+            try {
+                const encrypted = await aesEncrypt(msg, phrase, emo);
+                document.getElementById("encrypted").value = encrypted;
+                displayStatus("simpleStatus", "✅ Сообщение успешно зашифровано!");
+            } catch (error) {
+                displayStatus("simpleStatus", error.message, true);
+            }
+        };
+
+        const encryptDual = async () => {
+            displayStatus("dualStatus", "");
+            const realMessage = document.getElementById("realMessage").value;
+            const realPhrase = document.getElementById("realPhrase").value;
+            const realEmo = document.getElementById("realEmo").value;
+            const fakeMessage = document.getElementById("fakeMessage").value;
+            const fakePhrase = document.getElementById("fakePhrase").value;
+            const fakeEmo = document.getElementById("fakeEmo").value;
+
+            try {
+                const realEncrypted = await aesEncrypt(realMessage, realPhrase, realEmo);
+                const fakeEncrypted = await aesEncrypt(fakeMessage, fakePhrase, fakeEmo);
+                const vault = { mode: "dual", real: realEncrypted, fake: fakeEncrypted };
+                document.getElementById("dualVault").value = JSON.stringify(vault, null, 2);
+                displayStatus("dualStatus", "✅ Оба сообщения успешно зашифрованы!");
+            } catch (error) {
+                displayStatus("dualStatus", error.message, true);
+            }
+        };
+
+        const saveDualVault = () => {
+            const text = document.getElementById("dualVault").value;
+            if (!text || text.trim() === "") {
+                displayStatus("dualStatus", "⚠️ Сначала зашифруйте сообщения в режиме 'С прикрытием'!", true);
+                return;
+            }
+            downloadFile(text, "vault_dual.json");
+            displayStatus("dualStatus", "💾 Vault успешно сохранен!", false);
+        };
+
+        const addLayer = () => {
+            const container = document.getElementById("layerContainer");
+            const div = document.createElement("div");
+            div.className = "layer-item"; // Добавляем класс для стилизации
+            div.innerHTML = `
+                <input placeholder="🔖 Название слоя" />
+                <input placeholder="🔑 Фраза" />
+                <input placeholder="🎨 Эмо-код" />
+                <textarea placeholder="✍ Сообщение" rows="3"></textarea>
+                <hr style="border-top: 1px solid #eeeeee; margin: 1rem 0;"/>
+            `;
+            container.appendChild(div);
+        };
+
+        const encryptMulti = async () => {
+            displayStatus("multiStatus", "");
+            const layers = document.querySelectorAll("#layerContainer > div.layer-item");
+            if (layers.length === 0) {
+                displayStatus("multiStatus", "⚠️ Добавьте хотя бы один слой!", true);
+                return;
+            }
+            const result = [];
+            let allFieldsFilled = true;
+            for (const layer of layers) {
+                const [labelInput, phraseInput, emoInput, msgTextarea] = layer.querySelectorAll("input, textarea");
+                const label = labelInput.value;
+                const phrase = phraseInput.value;
+                const emo = emoInput.value;
+                const msg = msgTextarea.value;
+
+                if (!label || !phrase || !emo || !msg) {
+                    allFieldsFilled = false;
+                    break;
+                }
+                try {
+                    const token = await aesEncrypt(msg, phrase, emo);
+                    result.push({ label: label, token });
+                } catch (error) {
+                    displayStatus("multiStatus", `Ошибка шифрования слоя "${label}": ${error.message}`, true);
+                    return;
+                }
+            }
+
+            if (!allFieldsFilled) {
+                displayStatus("multiStatus", "⚠️ Все поля в каждом слое должны быть заполнены!", true);
+                return;
+            }
+            document.getElementById("multiVault").value = JSON.stringify({ mode: "multi", layers: result }, null, 2);
+            displayStatus("multiStatus", "✅ Все слои успешно зашифрованы!", false);
+        };
+
+        const saveMultiVault = () => {
+            const text = document.getElementById("multiVault").value;
+            if (!text || text.trim() === "") {
+                displayStatus("multiStatus", "⚠️ Сначала зашифруйте сообщения в режиме 'Многоуровневый сейф'!", true);
+                return;
+            }
+            downloadFile(text, "vault_multi.json");
+            displayStatus("multiStatus", "💾 Vault успешно сохранен!", false);
+        };
+
+        const decryptVault = async () => {
+            displayStatus("qrStatus", ""); // Clear QR status
+            document.getElementById("decryptionResult").innerHTML = "<p>Результат расшифровки появится здесь.</p>"; // Clear previous result
+            const inputVaultText = document.getElementById("inputVault").value;
+
+            if (!inputVaultText.trim()) {
+                document.getElementById("decryptionResult").innerText = "⚠️ Поле для Vault не может быть пустым.";
+                return;
+            }
+
+            let vault;
+            try {
+                vault = JSON.parse(inputVaultText);
+            } catch (e) {
+                // Not a JSON, try to decrypt as simple encrypted text
+                const phrase = prompt("🔑 Введите нейрофразу для расшифровки:");
+                if (phrase === null) return; // User cancelled
+                const emo = prompt("🎨 Введите эмо-код для расшифровки:");
+                if (emo === null) return; // User cancelled
+
+                const decrypted = await aesDecrypt(inputVaultText, phrase, emo);
+                document.getElementById("decryptionResult").innerText = `🔒 Расшифрованное сообщение:\n\n${decrypted}`;
+                if (document.getElementById("autoDelete").checked) {
+                    document.getElementById("inputVault").value = "";
+                    document.getElementById("vaultLoader").value = "";
+                }
+                return;
+            }
+
+            let output = "";
+
+            if (vault.mode === "dual") {
+                const phrase = prompt("🔑 Введите нейрофразу:");
+                if (phrase === null) { document.getElementById("decryptionResult").innerText = "Отменено."; return; }
+                const emo = prompt("🎨 Введите эмо-код:");
+                if (emo === null) { document.getElementById("decryptionResult").innerText = "Отменено."; return; }
+
+                let realDecrypted = await aesDecrypt(vault.real, phrase, emo);
+                if (!realDecrypted.startsWith("⛔")) {
+                    output = `✅ **Настоящее сообщение:**\n${realDecrypted}`;
+                } else {
+                    let fakeDecrypted = await aesDecrypt(vault.fake, phrase, emo);
+                    if (!fakeDecrypted.startsWith("⛔")) {
+                        output = `🎭 **Сообщение-прикрытие:**\n${fakeDecrypted}`;
+                    } else {
+                        output = `⛔ **Неверная нейрофраза/эмо-код для обоих сообщений.**`;
+                    }
+                }
+            } else if (vault.mode === "multi") {
+                if (!Array.isArray(vault.layers)) {
+                    document.getElementById("decryptionResult").innerText = "⛔ Некорректный формат Vault для многоуровневого сейфа.";
+                    return;
+                }
+                for (const layer of vault.layers) {
+                    output += `\n--- 🔒 **${layer.label || 'Неизвестный слой'}** ---\n`;
+                    const phrase = prompt(`🔑 Введите нейрофразу для слоя: "${layer.label || 'Неизвестный слой'}"`);
+                    if (phrase === null) { output += "Отменено.\n"; break; } // User cancelled current layer
+                    const emo = prompt(`🎨 Введите эмо-код для слоя: "${layer.label || 'Неизвестный слой'}"`);
+                    if (emo === null) { output += "Отменено.\n"; break; } // User cancelled current layer
+                    output += await aesDecrypt(layer.token, phrase, emo) + "\n";
+                }
+            } else {
+                 document.getElementById("decryptionResult").innerText = "⛔ Неизвестный режим Vault или поврежденный JSON. Попробуйте ввести как обычный зашифрованный текст.";
+                 return;
+            }
+
+            document.getElementById("decryptionResult").innerText = output;
+            if (document.getElementById("autoDelete").checked) {
+                document.getElementById("inputVault").value = "";
+                document.getElementById("vaultLoader").value = "";
+            }
+        };
+
+        const downloadFile = (text, filename) => {
+            const blob = new Blob([text], { type: "application/json" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link); // Required for Firefox
+            link.click();
+            document.body.removeChild(link); // Clean up
+            URL.revokeObjectURL(link.href); // Free up memory
+        };
+
+        const loadVaultFile = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById("inputVault").value = e.target.result;
+                displayStatus("qrStatus", "📥 Файл загружен в поле Vault.", false);
+            };
+            reader.onerror = () => {
+                displayStatus("qrStatus", "⛔ Ошибка чтения файла.", true);
+            };
+            reader.readAsText(file);
+        };
+
+        const dropVault = (e) => {
+            e.preventDefault();
+            e.stopPropagation(); // Prevent default browser file handling
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.includes("json")) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    document.getElementById("inputVault").value = ev.target.result;
+                    displayStatus("qrStatus", "📥 Файл перетащен и загружен в поле Vault.", false);
+                };
+                reader.onerror = () => {
+                    displayStatus("qrStatus", "⛔ Ошибка чтения перетащенного файла.", true);
+                };
+                reader.readAsText(file);
+            } else {
+                displayStatus("qrStatus", "⚠️ Пожалуйста, перетащите файл в формате .json", true);
+            }
+        };
+
+        const generateQR = () => {
+            displayStatus("qrStatus", "");
+            const data = document.getElementById("inputVault").value;
+            if (!data) {
+                displayStatus("qrStatus", "📭 Сначала вставьте JSON Vault или зашифрованный текст!", true);
+                document.getElementById("qrcanvas").getContext('2d').clearRect(0, 0, document.getElementById("qrcanvas").width, document.getElementById("qrcanvas").height);
+                return;
+            }
+            let parsedData;
+            try {
+                // Try to parse as JSON first, if not, use as plain text
+                parsedData = JSON.stringify(JSON.parse(data));
+            } catch {
+                parsedData = data; // If not valid JSON, treat as plain encrypted text
+            }
+
+            const canvasElement = document.getElementById("qrcanvas");
+            const qrOptions = {
+                width: 256,
+                color: {
+                    dark: "#000000", // Чёрные пиксели QR
+                    light: "#ffffff" // Белый фон QR
+                }
+            };
+            QRCode.toCanvas(canvasElement, parsedData, qrOptions, function (error) {
+                if (error) {
+                    console.error(error);
+                    displayStatus("qrStatus", "⚠️ Ошибка при создании QR-кода. Возможно, слишком много данных.", true);
+                } else {
+                    displayStatus("qrStatus", "📸 QR-код успешно создан!", false);
+                }
+            });
+        };
+
+        const saveQRAsPNG = () => {
+            const canvas = document.getElementById("qrcanvas");
+            if (!canvas.getContext('2d').getImageData(0, 0, 1, 1).data[3]) { // Check if canvas is empty
+                displayStatus("qrStatus", "⚠️ Сначала сгенерируйте QR-код!", true);
+                return;
+            }
+            const link = document.createElement("a");
+            link.download = "vault_qr.png";
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+            displayStatus("qrStatus", "💾 QR-код сохранен как PNG.", false);
+        };
+
+        // Initialize with one layer for multi-level vault by default
+        document.addEventListener('DOMContentLoaded', () => {
+            toggleMode(); // Ensure correct section is visible on load
+            addLayer(); // Add one default layer for multi-mode
+        });
+    </script>
+</body>
+</html>

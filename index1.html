@@ -4,97 +4,269 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>🧠 Нейрошифратор ∞</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: monospace;
-            background: #ffffff; /* Белый фон */
-            color: #000000; /* Чёрный текст */
-            padding: 2rem;
-            margin: 0;
-            overflow: hidden; /* Скрываем прокрутку для холста */
-            position: relative;
+        :root {
+            --bg-color: #f0f2f5; /* Light mode background */
+            --text-color: #333333; /* Light mode text */
+            --section-bg: #ffffff; /* Light mode section background */
+            --input-bg: #333333; /* Input background */
+            --input-text: #ffffff; /* Input text color */
+            --border-color: #e0e0e0; /* Light mode border */
+            --button-bg: #007aff; /* Apple-like blue */
+            --button-text: #ffffff;
+            --button-hover-bg: #006ee6;
+            --accent-color: #007aff; /* Main accent color */
+            --qr-dark: #000000;
+            --qr-light: #ffffff;
+            --matrix-color: #00A000; /* Dark green for matrix */
+            --matrix-opacity: 0.1;
         }
-        /* Стили для холста матрицы */
+
+        body.dark-mode {
+            --bg-color: #1c1c1c; /* Dark mode background */
+            --text-color: #f0f0f0; /* Dark mode text */
+            --section-bg: #2c2c2c; /* Dark mode section background */
+            --input-bg: #444444;
+            --input-text: #f0f0f0;
+            --border-color: #444444; /* Dark mode border */
+            --button-bg: #0a84ff; /* Slightly brighter blue for dark mode */
+            --button-hover-bg: #3299ff;
+            --accent-color: #0a84ff;
+            --qr-dark: #f0f0f0;
+            --qr-light: #1c1c1c;
+            --matrix-opacity: 0.05; /* More subtle in dark mode */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+        
+        /* Matrix animation */
         #matrixCanvas {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: -1; /* Помещаем за содержимым */
-            opacity: 0.1; /* Немного прозрачности для фона */
-        }
-        .content-wrapper {
-            position: relative;
-            z-index: 1; /* Поверх холста */
-            background: #ffffff; /* Белый фон для содержимого */
-            padding: 2rem;
-            max-width: 800px;
-            margin: 0 auto;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2); /* Небольшая тень для выделения */
-            box-sizing: border-box;
-            height: 100vh; /* Заполняем всю высоту */
-            overflow-y: auto; /* Скролл для содержимого, если оно не помещается */
+            z-index: -1;
+            opacity: var(--matrix-opacity);
         }
 
-        input, textarea, button, select {
-            background: #1a1a1a; /* Тёмные поля ввода */
-            color: #ffffff; /* Белый текст в полях */
-            border: 1px solid #000000; /* Чёрная рамка */
-            padding: 0.5rem;
+        .content-wrapper {
+            position: relative;
+            z-index: 1;
+            background: var(--section-bg);
+            padding: 2rem;
+            max-width: 768px; /* Standard iPad Pro width */
+            margin: 2rem auto; /* Center with margin */
+            border-radius: 12px; /* Apple-like rounded corners */
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1); /* Soft shadow */
+            box-sizing: border-box;
+            max-height: calc(100vh - 4rem); /* Fit within viewport */
+            overflow-y: auto; /* Scroll for content */
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+        }
+
+        h1, h2, h3 {
+            color: var(--text-color);
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        h1 { font-size: 2rem; }
+        h2 { font-size: 1.5rem; }
+        h3 { font-size: 1.2rem; }
+
+        input, textarea, select {
+            background: var(--input-bg);
+            color: var(--input-text);
+            border: 1px solid var(--border-color);
+            padding: 0.75rem 1rem; /* More padding */
+            margin: 0.5rem 0;
+            width: calc(100% - 22px); /* Adjust for clear button */
+            box-sizing: border-box;
+            border-radius: 8px; /* Rounded input fields */
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        input:focus, textarea:focus, select:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
+            outline: none;
+        }
+
+        button {
+            cursor: pointer;
+            background: var(--button-bg);
+            color: var(--button-text);
+            border: none;
+            padding: 0.75rem 1.25rem;
             margin: 0.5rem 0;
             width: 100%;
             box-sizing: border-box;
-        }
-        button {
-            cursor: pointer;
-            background: #000000; /* Чёрные кнопки */
-            color: #ffffff; /* Белый текст на кнопках */
-            border: 1px solid #000000;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: background-color 0.2s ease, opacity 0.2s ease;
         }
         button:hover {
-            opacity: 0.9;
+            background-color: var(--button-hover-bg);
         }
+        button:active {
+            opacity: 0.8;
+        }
+
         .section {
-            border: 1px solid #cccccc; /* Светлая рамка секций */
-            padding: 1rem;
+            background: var(--section-bg);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
             margin-bottom: 2rem;
+            border-radius: 10px;
         }
         .hidden {
             display: none;
         }
         #dropzone {
-            border: 2px dashed #000000; /* Чёрная пунктирная рамка */
-            padding: 1rem;
+            border: 2px dashed var(--border-color);
+            padding: 1.5rem;
             text-align: center;
             margin-bottom: 1rem;
-            color: #000000;
+            color: var(--text-color);
+            border-radius: 8px;
+            background: var(--bg-color);
         }
         canvas {
             max-width: 100%;
             margin-top: 1rem;
-            border: 1px solid #cccccc;
-        }
-        h1, h2, h3 {
-            color: #000000; /* Чёрные заголовки */
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
         }
         label {
             display: flex;
             align-items: center;
             margin: 0.5rem 0;
+            font-size: 0.95rem;
+            color: var(--text-color);
         }
         label input[type="checkbox"] {
             width: auto;
             margin-right: 0.5rem;
-            background: #ffffff;
-            border: 1px solid #000000;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            appearance: none;
+            -webkit-appearance: none;
+            height: 18px;
+            width: 18px;
+            cursor: pointer;
+            position: relative;
+            top: -1px;
         }
+        label input[type="checkbox"]:checked {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+        label input[type="checkbox"]:checked::after {
+            content: '✔';
+            color: white;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            line-height: 1;
+        }
+
+        .clear-button {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 1.2rem;
+            padding: 0;
+            margin: 0;
+            cursor: pointer;
+            width: 20px; /* fixed width */
+            height: 20px;
+            line-height: 1;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            vertical-align: middle;
+            margin-left: 5px;
+            border-radius: 50%;
+            transition: background-color 0.2s ease;
+        }
+        .clear-button:hover {
+            background: var(--border-color);
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+        .input-group input, .input-group textarea {
+            width: calc(100% - 25px); /* Take into account clear button */
+            margin-right: 5px;
+        }
+
+        .status-message {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+        .status-success { color: var(--accent-color); }
+        .status-error { color: #ff3b30; /* Apple red */ }
+
+        #decryptionResult {
+            background: var(--input-bg);
+            color: var(--input-text);
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin-top: 1rem;
+            border: 1px dashed var(--border-color);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            min-height: 40px; /* Ensure it's visible even when empty */
+        }
+
+        #themeToggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            background: var(--section-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            z-index: 100;
+        }
+        #themeToggle:hover {
+            background-color: var(--bg-color);
+        }
+        
     </style>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
 </head>
 <body>
     <canvas id="matrixCanvas"></canvas>
     <div class="content-wrapper">
+        <button id="themeToggle" onclick="toggleTheme()">☀️ / 🌙</button>
+
         <h1>🧠 Нейрошифратор ∞</h1>
 
         <div class="section">
@@ -108,26 +280,61 @@
 
         <div id="simpleSection" class="section">
             <h2>🔒 Базовое шифрование</h2>
-            <input type="text" id="phrase" placeholder="🔑 Нейрофраза" />
-            <input type="text" id="emo" placeholder="🎨 Эмо-код (напр. 🔥💧🌕)" />
-            <textarea id="message" rows="4" placeholder="✍ Сообщение"></textarea>
+            <div class="input-group">
+                <input type="text" id="phrase" placeholder="🔑 Нейрофраза" />
+                <button class="clear-button" onclick="clearField('phrase')">🗑️</button>
+            </div>
+            <div class="input-group">
+                <input type="text" id="emo" placeholder="🎨 Эмо-код (напр. 🔥💧🌕)" />
+                <button class="clear-button" onclick="clearField('emo')">🗑️</button>
+            </div>
+            <div class="input-group">
+                <textarea id="message" rows="4" placeholder="✍ Сообщение"></textarea>
+                <button class="clear-button" onclick="clearField('message')">🗑️</button>
+            </div>
             <button onclick="encryptSimple()">Зашифровать</button>
-            <textarea id="encrypted" rows="5" readonly placeholder="🔐 Зашифровано тут"></textarea>
-            <p id="simpleStatus" style="color: #007700;"></p>
+            <div class="input-group">
+                <textarea id="encrypted" rows="5" readonly placeholder="🔐 Зашифровано тут"></textarea>
+                <button class="clear-button" onclick="clearField('encrypted')">🗑️</button>
+            </div>
+            <p id="simpleStatus" class="status-message"></p>
         </div>
 
         <div id="dualSection" class="section hidden">
             <h2>🎭 С прикрытием</h2>
-            <input type="text" id="realPhrase" placeholder="🔑 Настоящая нейрофраза" />
-            <input type="text" id="realEmo" placeholder="🎨 Эмо-код для настоящего" />
-            <textarea id="realMessage" rows="3" placeholder="✍ Настоящее сообщение"></textarea>
-            <input type="text" id="fakePhrase" placeholder="🔑 Фраза прикрытия" />
-            <input type="text" id="fakeEmo" placeholder="🎨 Эмо-код для прикрытия" />
-            <textarea id="fakeMessage" rows="3" placeholder="✍ Сообщение-прикрытие"></textarea>
+            <h3>Настоящее сообщение</h3>
+            <div class="input-group">
+                <input type="text" id="realPhrase" placeholder="🔑 Настоящая нейрофраза" />
+                <button class="clear-button" onclick="clearField('realPhrase')">🗑️</button>
+            </div>
+            <div class="input-group">
+                <input type="text" id="realEmo" placeholder="🎨 Эмо-код для настоящего" />
+                <button class="clear-button" onclick="clearField('realEmo')">🗑️</button>
+            </div>
+            <div class="input-group">
+                <textarea id="realMessage" rows="3" placeholder="✍ Настоящее сообщение"></textarea>
+                <button class="clear-button" onclick="clearField('realMessage')">🗑️</button>
+            </div>
+            <h3>Сообщение-прикрытие</h3>
+            <div class="input-group">
+                <input type="text" id="fakePhrase" placeholder="🔑 Фраза прикрытия" />
+                <button class="clear-button" onclick="clearField('fakePhrase')">🗑️</button>
+            </div>
+            <div class="input-group">
+                <input type="text" id="fakeEmo" placeholder="🎨 Эмо-код для прикрытия" />
+                <button class="clear-button" onclick="clearField('fakeEmo')">🗑️</button>
+            </div>
+            <div class="input-group">
+                <textarea id="fakeMessage" rows="3" placeholder="✍ Сообщение-прикрытие"></textarea>
+                <button class="clear-button" onclick="clearField('fakeMessage')">🗑️</button>
+            </div>
             <button onclick="encryptDual()">Зашифровать оба</button>
             <button onclick="saveDualVault()">💾 Сохранить Vault</button>
-            <textarea id="dualVault" rows="7" readonly placeholder="🔐 Vault JSON"></textarea>
-            <p id="dualStatus" style="color: #007700;"></p>
+            <div class="input-group">
+                <textarea id="dualVault" rows="7" readonly placeholder="🔐 Vault JSON"></textarea>
+                <button class="clear-button" onclick="clearField('dualVault')">🗑️</button>
+            </div>
+            <p id="dualStatus" class="status-message"></p>
         </div>
 
         <div id="multiSection" class="section hidden">
@@ -136,27 +343,34 @@
             <button onclick="addLayer()">➕ Добавить слой</button>
             <button onclick="encryptMulti()">🔐 Зашифровать все слои</button>
             <button onclick="saveMultiVault()">💾 Сохранить Vault</button>
-            <textarea id="multiVault" rows="8" readonly placeholder="📦 JSON-сейф"></textarea>
-            <p id="multiStatus" style="color: #007700;"></p>
+            <div class="input-group">
+                <textarea id="multiVault" rows="8" readonly placeholder="📦 JSON-сейф"></textarea>
+                <button class="clear-button" onclick="clearField('multiVault')">🗑️</button>
+            </div>
+            <p id="multiStatus" class="status-message"></p>
         </div>
 
         <div class="section">
-            <h2>📂 Загрузить / Разшифровать Vault</h2>
+            <h2>📂 Загрузить / Расшифровать Vault</h2>
             <input type="file" id="vaultLoader" onchange="loadVaultFile(event)" />
             <div id="dropzone" ondrop="dropVault(event)" ondragover="event.preventDefault()">
                 Перетащи сюда свой .vault.json файл 🧊
             </div>
             <label><input type="checkbox" id="autoDelete" /> 🔥 Удалить содержимое поля после расшифровки</label>
-            <textarea id="inputVault" rows="6" placeholder="📥 Вставь JSON-сейф или зашифрованный текст"></textarea>
+            <div class="input-group">
+                <textarea id="inputVault" rows="6" placeholder="📥 Вставьте JSON-сейф или зашифрованный текст"></textarea>
+                <button class="clear-button" onclick="clearField('inputVault')">🗑️</button>
+            </div>
             <button onclick="decryptVault()">Расшифровать</button>
-            <div id="decryptionResult" style="white-space: pre-wrap; word-break: break-all; margin-top: 1rem; border: 1px dashed #000000; padding: 0.5rem;">
-                <p>Результат расшифровки появится здесь.</p>
+            <div class="input-group">
+                <div id="decryptionResult" style="min-height: 40px;"><p>Результат расшифровки появится здесь.</p></div>
+                <button class="clear-button" onclick="clearDecryptionResult()">🗑️</button>
             </div>
             <h3>📸 Создать QR для Vault</h3>
             <button onclick="generateQR()">QR (темный)</button>
             <button onclick="saveQRAsPNG()">💾 Сохранить QR</button>
             <canvas id="qrcanvas"></canvas>
-            <p id="qrStatus" style="color: #007700;"></p>
+            <p id="qrStatus" class="status-message"></p>
         </div>
     </div>
 
@@ -177,16 +391,17 @@
                     x: i * FONT_SIZE,
                     y: 0,
                     text: String.fromCharCode(Math.random() * 94 + 33), // ASCII characters
-                    speed: Math.random() * FONT_SIZE * 0.5 + FONT_SIZE * 0.5 // Random speed
+                    speed: Math.random() * FONT_SIZE * 0.5 + FONT_SIZE * 0.5
                 };
             }
         };
 
         const drawMatrix = () => {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'; // Black background with transparency
+            const opacity = parseFloat(getComputedStyle(document.body).getPropertyValue('--matrix-opacity'));
+            ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`; // Slightly transparent black for fade effect
             ctx.fillRect(0, 0, W, H);
 
-            ctx.fillStyle = '#00FF00'; // Green text
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--matrix-color'); // Matrix green
             ctx.font = `${FONT_SIZE}px monospace`;
 
             for (let i = 0; i < particles.length; i++) {
@@ -205,29 +420,44 @@
         initMatrix();
         setInterval(drawMatrix, 50);
 
-        // --- Crypto functions ---
-        // PBKDF2 parameters
-        const PBKDF2_ITERATIONS = 200000; // Высокое количество итераций для безопасности
-        const PBKDF2_HASH_ALG = 'SHA-256';
-        const KEY_LENGTH_BITS = 256; // 256 бит для AES-256
+        // Theme Toggle
+        const toggleTheme = () => {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+            // Re-init matrix to apply new opacity immediately
+            initMatrix(); // Re-initialize particles to account for potential new dimensions
+            drawMatrix(); // Redraw immediately to apply new opacity
+        };
 
-        // Helper to display status messages
+        // Load theme from localStorage
+        const loadTheme = () => {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+            }
+        };
+        loadTheme();
+
+
+        // --- Crypto functions ---
+        const PBKDF2_ITERATIONS = 200000;
+        const PBKDF2_HASH_ALG = 'SHA-256';
+        const KEY_LENGTH_BITS = 256; // AES-256
+
         const displayStatus = (elementId, message, isError = false) => {
             const element = document.getElementById(elementId);
             if (element) {
                 element.innerText = message;
-                element.style.color = isError ? '#FF0000' : '#007700';
+                element.className = `status-message ${isError ? 'status-error' : 'status-success'}`;
             }
         };
 
-        // Generates a random salt for PBKDF2
-        const generateSalt = () => crypto.getRandomValues(new Uint8Array(16)); // 16 bytes = 128 bits
+        const generateSalt = () => crypto.getRandomValues(new Uint8Array(16));
 
-        // Derives a key using PBKDF2
         const deriveKey = async (phrase, emo, salt) => {
             const combined = phrase + '::' + emo;
             const passwordBuffer = new TextEncoder().encode(combined);
-            const saltBuffer = salt; // PBKDF2 expects Uint8Array for salt
+            const saltBuffer = salt;
 
             const keyMaterial = await crypto.subtle.importKey(
                 'raw',
@@ -252,13 +482,12 @@
             return key;
         };
 
-        // Encrypts text using AES-CBC
         const aesEncrypt = async (text, phrase, emo) => {
             if (!text || !phrase || !emo) {
                 throw new Error("Все поля (сообщение, нейрофраза, эмо-код) должны быть заполнены.");
             }
 
-            const iv = crypto.getRandomValues(new Uint8Array(16)); // 16 bytes for IV
+            const iv = crypto.getRandomValues(new Uint8Array(16));
             const salt = generateSalt();
 
             try {
@@ -269,9 +498,6 @@
                     new TextEncoder().encode(text)
                 );
 
-                // Combine salt, IV, and encrypted data for storage
-                // Use a header to indicate salt and IV length (e.g., 1 byte for salt_len, 1 byte for iv_len)
-                // For simplicity, we fix salt and IV to 16 bytes, so we just prepend them.
                 const combined = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
                 combined.set(salt, 0);
                 combined.set(iv, salt.length);
@@ -280,11 +506,10 @@
                 return btoa(String.fromCharCode(...combined));
             } catch (error) {
                 console.error("Ошибка шифрования:", error);
-                throw new Error("Ошибка шифрования: " + error.message);
+                throw new Error("Ошибка шифрования: Проверьте введенные данные.");
             }
         };
 
-        // Decrypts text using AES-CBC
         const aesDecrypt = async (encryptedDataB64, phrase, emo) => {
             if (!encryptedDataB64 || !phrase || !emo) {
                 throw new Error("Все поля (зашифрованный текст, нейрофраза, эмо-код) должны быть заполнены.");
@@ -292,8 +517,8 @@
 
             try {
                 const combinedBytes = Uint8Array.from(atob(encryptedDataB64), c => c.charCodeAt(0));
-                if (combinedBytes.length < 32) { // 16 bytes salt + 16 bytes IV
-                    throw new Error("Некорректный формат зашифрованных данных (слишком короткие).");
+                if (combinedBytes.length < 32) {
+                    throw new Error("Некорректный формат зашифрованных данных.");
                 }
 
                 const salt = combinedBytes.slice(0, 16);
@@ -309,7 +534,6 @@
                 return new TextDecoder().decode(decrypted);
             } catch (error) {
                 console.error("Ошибка дешифрования:", error);
-                // Более общее сообщение для пользователя, чтобы не раскрывать детали атаки
                 return "⛔ Ошибка дешифрования: Неверная нейрофраза, эмо-код или поврежденные данные.";
             }
         };
@@ -334,7 +558,7 @@
             try {
                 const encrypted = await aesEncrypt(msg, phrase, emo);
                 document.getElementById("encrypted").value = encrypted;
-                displayStatus("simpleStatus", "✅ Сообщение успешно зашифровано!");
+                displayStatus("simpleStatus", "✅ Сообщение успешно зашифровано!", false);
             } catch (error) {
                 displayStatus("simpleStatus", error.message, true);
             }
@@ -354,7 +578,7 @@
                 const fakeEncrypted = await aesEncrypt(fakeMessage, fakePhrase, fakeEmo);
                 const vault = { mode: "dual", real: realEncrypted, fake: fakeEncrypted };
                 document.getElementById("dualVault").value = JSON.stringify(vault, null, 2);
-                displayStatus("dualStatus", "✅ Оба сообщения успешно зашифрованы!");
+                displayStatus("dualStatus", "✅ Оба сообщения успешно зашифрованы!", false);
             } catch (error) {
                 displayStatus("dualStatus", error.message, true);
             }
@@ -373,15 +597,35 @@
         const addLayer = () => {
             const container = document.getElementById("layerContainer");
             const div = document.createElement("div");
-            div.className = "layer-item"; // Добавляем класс для стилизации
+            div.className = "layer-item";
             div.innerHTML = `
-                <input placeholder="🔖 Название слоя" />
-                <input placeholder="🔑 Фраза" />
-                <input placeholder="🎨 Эмо-код" />
-                <textarea placeholder="✍ Сообщение" rows="3"></textarea>
-                <hr style="border-top: 1px solid #eeeeee; margin: 1rem 0;"/>
+                <div class="input-group">
+                    <input placeholder="🔖 Название слоя" />
+                    <button class="clear-button" onclick="clearLayerField(this)">🗑️</button>
+                </div>
+                <div class="input-group">
+                    <input placeholder="🔑 Фраза" />
+                    <button class="clear-button" onclick="clearLayerField(this)">🗑️</button>
+                </div>
+                <div class="input-group">
+                    <input placeholder="🎨 Эмо-код" />
+                    <button class="clear-button" onclick="clearLayerField(this)">🗑️</button>
+                </div>
+                <div class="input-group">
+                    <textarea placeholder="✍ Сообщение" rows="3"></textarea>
+                    <button class="clear-button" onclick="clearLayerField(this)">🗑️</button>
+                </div>
+                <hr style="border-top: 1px solid var(--border-color); margin: 1rem 0;"/>
             `;
             container.appendChild(div);
+        };
+        
+        // Helper to clear fields in multi-layer
+        const clearLayerField = (buttonElement) => {
+            const inputOrTextarea = buttonElement.previousElementSibling;
+            if (inputOrTextarea) {
+                inputOrTextarea.value = '';
+            }
         };
 
         const encryptMulti = async () => {
@@ -408,7 +652,7 @@
                     const token = await aesEncrypt(msg, phrase, emo);
                     result.push({ label: label, token });
                 } catch (error) {
-                    displayStatus("multiStatus", `Ошибка шифрования слоя "${label}": ${error.message}`, true);
+                    displayStatus("multiStatus", `Ошибка шифрования слоя "${label || 'Без названия'}": ${error.message}`, true);
                     return;
                 }
             }
@@ -432,12 +676,12 @@
         };
 
         const decryptVault = async () => {
-            displayStatus("qrStatus", ""); // Clear QR status
-            document.getElementById("decryptionResult").innerHTML = "<p>Результат расшифровки появится здесь.</p>"; // Clear previous result
+            displayStatus("qrStatus", "");
+            document.getElementById("decryptionResult").innerHTML = "<p>Результат расшифровки появится здесь.</p>";
             const inputVaultText = document.getElementById("inputVault").value;
 
             if (!inputVaultText.trim()) {
-                document.getElementById("decryptionResult").innerText = "⚠️ Поле для Vault не может быть пустым.";
+                document.getElementById("decryptionResult").innerHTML = "<p class='status-error'>⚠️ Поле для Vault не может быть пустым.</p>";
                 return;
             }
 
@@ -447,14 +691,15 @@
             } catch (e) {
                 // Not a JSON, try to decrypt as simple encrypted text
                 const phrase = prompt("🔑 Введите нейрофразу для расшифровки:");
-                if (phrase === null) return; // User cancelled
+                if (phrase === null) { document.getElementById("decryptionResult").innerHTML = "<p>Отменено.</p>"; return; }
                 const emo = prompt("🎨 Введите эмо-код для расшифровки:");
-                if (emo === null) return; // User cancelled
+                if (emo === null) { document.getElementById("decryptionResult").innerHTML = "<p>Отменено.</p>"; return; }
 
                 const decrypted = await aesDecrypt(inputVaultText, phrase, emo);
-                document.getElementById("decryptionResult").innerText = `🔒 Расшифрованное сообщение:\n\n${decrypted}`;
-                if (document.getElementById("autoDelete").checked) {
-                    document.getElementById("inputVault").value = "";
+                const isError = decrypted.startsWith("⛔");
+                document.getElementById("decryptionResult").innerHTML = `<p class="${isError ? 'status-error' : 'status-success'}">${isError ? decrypted : `🔒 Расшифрованное сообщение:\n\n${decrypted}`}</p>`;
+                if (document.getElementById("autoDelete").checked && !isError) {
+                    clearField('inputVault');
                     document.getElementById("vaultLoader").value = "";
                 }
                 return;
@@ -464,9 +709,9 @@
 
             if (vault.mode === "dual") {
                 const phrase = prompt("🔑 Введите нейрофразу:");
-                if (phrase === null) { document.getElementById("decryptionResult").innerText = "Отменено."; return; }
+                if (phrase === null) { document.getElementById("decryptionResult").innerHTML = "<p>Отменено.</p>"; return; }
                 const emo = prompt("🎨 Введите эмо-код:");
-                if (emo === null) { document.getElementById("decryptionResult").innerText = "Отменено."; return; }
+                if (emo === null) { document.getElementById("decryptionResult").innerHTML = "<p>Отменено.</p>"; return; }
 
                 let realDecrypted = await aesDecrypt(vault.real, phrase, emo);
                 if (!realDecrypted.startsWith("⛔")) {
@@ -481,25 +726,25 @@
                 }
             } else if (vault.mode === "multi") {
                 if (!Array.isArray(vault.layers)) {
-                    document.getElementById("decryptionResult").innerText = "⛔ Некорректный формат Vault для многоуровневого сейфа.";
+                    document.getElementById("decryptionResult").innerHTML = "<p class='status-error'>⛔ Некорректный формат Vault для многоуровневого сейфа.</p>";
                     return;
                 }
                 for (const layer of vault.layers) {
                     output += `\n--- 🔒 **${layer.label || 'Неизвестный слой'}** ---\n`;
                     const phrase = prompt(`🔑 Введите нейрофразу для слоя: "${layer.label || 'Неизвестный слой'}"`);
-                    if (phrase === null) { output += "Отменено.\n"; break; } // User cancelled current layer
+                    if (phrase === null) { output += "Отменено.\n"; break; }
                     const emo = prompt(`🎨 Введите эмо-код для слоя: "${layer.label || 'Неизвестный слой'}"`);
-                    if (emo === null) { output += "Отменено.\n"; break; } // User cancelled current layer
+                    if (emo === null) { output += "Отменено.\n"; break; }
                     output += await aesDecrypt(layer.token, phrase, emo) + "\n";
                 }
             } else {
-                 document.getElementById("decryptionResult").innerText = "⛔ Неизвестный режим Vault или поврежденный JSON. Попробуйте ввести как обычный зашифрованный текст.";
+                 document.getElementById("decryptionResult").innerHTML = "<p class='status-error'>⛔ Неизвестный режим Vault или поврежденный JSON. Попробуйте ввести как обычный зашифрованный текст.</p>";
                  return;
             }
 
-            document.getElementById("decryptionResult").innerText = output;
-            if (document.getElementById("autoDelete").checked) {
-                document.getElementById("inputVault").value = "";
+            document.getElementById("decryptionResult").innerHTML = `<p>${output}</p>`;
+            if (document.getElementById("autoDelete").checked && !output.includes("⛔")) { // Only clear if decryption was successful
+                clearField('inputVault');
                 document.getElementById("vaultLoader").value = "";
             }
         };
@@ -509,10 +754,10 @@
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
             link.download = filename;
-            document.body.appendChild(link); // Required for Firefox
+            document.body.appendChild(link);
             link.click();
-            document.body.removeChild(link); // Clean up
-            URL.revokeObjectURL(link.href); // Free up memory
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
         };
 
         const loadVaultFile = (event) => {
@@ -532,7 +777,7 @@
 
         const dropVault = (e) => {
             e.preventDefault();
-            e.stopPropagation(); // Prevent default browser file handling
+            e.stopPropagation();
             const file = e.dataTransfer.files[0];
             if (file && file.type.includes("json")) {
                 const reader = new FileReader();
@@ -559,18 +804,21 @@
             }
             let parsedData;
             try {
-                // Try to parse as JSON first, if not, use as plain text
                 parsedData = JSON.stringify(JSON.parse(data));
             } catch {
-                parsedData = data; // If not valid JSON, treat as plain encrypted text
+                parsedData = data;
             }
 
             const canvasElement = document.getElementById("qrcanvas");
+            const rootStyles = getComputedStyle(document.documentElement);
+            const qrDarkColor = rootStyles.getPropertyValue('--qr-dark').trim();
+            const qrLightColor = rootStyles.getPropertyValue('--qr-light').trim();
+
             const qrOptions = {
                 width: 256,
                 color: {
-                    dark: "#000000", // Чёрные пиксели QR
-                    light: "#ffffff" // Белый фон QR
+                    dark: qrDarkColor,
+                    light: qrLightColor
                 }
             };
             QRCode.toCanvas(canvasElement, parsedData, qrOptions, function (error) {
@@ -585,7 +833,7 @@
 
         const saveQRAsPNG = () => {
             const canvas = document.getElementById("qrcanvas");
-            if (!canvas.getContext('2d').getImageData(0, 0, 1, 1).data[3]) { // Check if canvas is empty
+            if (!canvas.getContext('2d').getImageData(0, 0, 1, 1).data[3]) {
                 displayStatus("qrStatus", "⚠️ Сначала сгенерируйте QR-код!", true);
                 return;
             }
@@ -596,10 +844,25 @@
             displayStatus("qrStatus", "💾 QR-код сохранен как PNG.", false);
         };
 
-        // Initialize with one layer for multi-level vault by default
+        // Clear button functionality
+        const clearField = (fieldId) => {
+            document.getElementById(fieldId).value = '';
+            // Clear associated status message if any
+            const statusElement = document.getElementById(fieldId + 'Status');
+            if (statusElement) statusElement.innerText = '';
+        };
+
+        const clearDecryptionResult = () => {
+            document.getElementById('decryptionResult').innerHTML = '<p>Результат расшифровки появится здесь.</p>';
+        };
+
+
         document.addEventListener('DOMContentLoaded', () => {
-            toggleMode(); // Ensure correct section is visible on load
-            addLayer(); // Add one default layer for multi-mode
+            toggleMode();
+            addLayer();
+            // Trigger matrix redraw on initial load to ensure correct opacity is applied from theme
+            initMatrix();
+            drawMatrix();
         });
     </script>
 </body>

@@ -10,8 +10,8 @@
             --bg-color: #f0f2f5; /* Light mode background */
             --text-color: #333333; /* Light mode text */
             --section-bg: #ffffff; /* Light mode section background */
-            --input-bg: #333333; /* Input background */
-            --input-text: #ffffff; /* Input text color */
+            --input-bg: #e8e8e8; /* Light gray input background */
+            --input-text: #333333; /* Input text color */
             --border-color: #e0e0e0; /* Light mode border */
             --button-bg: #007aff; /* Apple-like blue */
             --button-text: #ffffff;
@@ -21,6 +21,9 @@
             --qr-light: #ffffff;
             --matrix-color: #00A000; /* Dark green for matrix */
             --matrix-opacity: 0.1;
+            --password-strength-weak: #ff3b30; /* Apple red */
+            --password-strength-medium: #ff9500; /* Apple orange */
+            --password-strength-strong: #34c759; /* Apple green */
         }
 
         body.dark-mode {
@@ -228,7 +231,8 @@
             font-size: 0.9rem;
         }
         .status-success { color: var(--accent-color); }
-        .status-error { color: #ff3b30; /* Apple red */ }
+        .status-error { color: var(--password-strength-weak); }
+        .status-info { color: var(--text-color); }
 
         #decryptionResult {
             background: var(--input-bg);
@@ -258,7 +262,34 @@
         #themeToggle:hover {
             background-color: var(--bg-color);
         }
-        
+
+        .password-strength-indicator {
+            height: 5px;
+            width: 100%;
+            background-color: var(--border-color);
+            border-radius: 2.5px;
+            margin-top: 0.2rem;
+            margin-bottom: 0.5rem;
+            overflow: hidden;
+        }
+        .password-strength-bar {
+            height: 100%;
+            width: 0%;
+            background-color: transparent;
+            transition: width 0.3s ease-in-out, background-color 0.3s ease-in-out;
+        }
+        .strength-weak .password-strength-bar { background-color: var(--password-strength-weak); width: 33%; }
+        .strength-medium .password-strength-bar { background-color: var(--password-strength-medium); width: 66%; }
+        .strength-strong .password-strength-bar { background-color: var(--password-strength-strong); width: 100%; }
+        .strength-text {
+            font-size: 0.85rem;
+            margin-top: 0.2rem;
+            color: var(--text-color);
+        }
+        .strength-text.weak { color: var(--password-strength-weak); }
+        .strength-text.medium { color: var(--password-strength-medium); }
+        .strength-text.strong { color: var(--password-strength-strong); }
+
     </style>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
 </head>
@@ -273,7 +304,7 @@
             <h2>🔐 Режим</h2>
             <select id="modeSelect" onchange="toggleMode()">
                 <option value="simple">Базовый</option>
-                <option value="dual">С прикрытием</option>
+                <option value="dual">С прикрытием (стеганография)</option>
                 <option value="multi">Многоуровневый сейф</option>
             </select>
         </div>
@@ -281,18 +312,23 @@
         <div id="simpleSection" class="section">
             <h2>🔒 Базовое шифрование</h2>
             <div class="input-group">
-                <input type="text" id="phrase" placeholder="🔑 Нейрофраза" />
+                <input type="text" id="phrase" placeholder="🔑 Нейрофраза" oninput="checkPasswordStrength('phrase', 'emo', 'simpleStrengthContainer')" />
                 <button class="clear-button" onclick="clearField('phrase')">🗑️</button>
             </div>
             <div class="input-group">
-                <input type="text" id="emo" placeholder="🎨 Эмо-код (напр. 🔥💧🌕)" />
+                <input type="text" id="emo" placeholder="🎨 Эмо-код (напр. 🔥💧🌕)" oninput="checkPasswordStrength('phrase', 'emo', 'simpleStrengthContainer')" />
                 <button class="clear-button" onclick="clearField('emo')">🗑️</button>
             </div>
+            <div id="simpleStrengthContainer" class="password-strength-indicator">
+                <div class="password-strength-bar"></div>
+            </div>
+            <p id="simpleStrengthText" class="strength-text">Введите фразу и эмо-код</p>
             <div class="input-group">
                 <textarea id="message" rows="4" placeholder="✍ Сообщение"></textarea>
                 <button class="clear-button" onclick="clearField('message')">🗑️</button>
             </div>
             <button onclick="encryptSimple()">Зашифровать</button>
+            <p id="simpleProgress" class="status-message status-info hidden"></p>
             <div class="input-group">
                 <textarea id="encrypted" rows="5" readonly placeholder="🔐 Зашифровано тут"></textarea>
                 <button class="clear-button" onclick="clearField('encrypted')">🗑️</button>
@@ -301,38 +337,48 @@
         </div>
 
         <div id="dualSection" class="section hidden">
-            <h2>🎭 С прикрытием</h2>
+            <h2>🎭 С прикрытием (стеганография)</h2>
+            <p class="status-info">Настоящее сообщение будет скрыто внутри зашифрованного сообщения-прикрытия.</p>
             <h3>Настоящее сообщение</h3>
             <div class="input-group">
-                <input type="text" id="realPhrase" placeholder="🔑 Настоящая нейрофраза" />
+                <input type="text" id="realPhrase" placeholder="🔑 Настоящая нейрофраза" oninput="checkPasswordStrength('realPhrase', 'realEmo', 'realStrengthContainer')" />
                 <button class="clear-button" onclick="clearField('realPhrase')">🗑️</button>
             </div>
             <div class="input-group">
-                <input type="text" id="realEmo" placeholder="🎨 Эмо-код для настоящего" />
+                <input type="text" id="realEmo" placeholder="🎨 Эмо-код для настоящего" oninput="checkPasswordStrength('realPhrase', 'realEmo', 'realStrengthContainer')" />
                 <button class="clear-button" onclick="clearField('realEmo')">🗑️</button>
             </div>
+            <div id="realStrengthContainer" class="password-strength-indicator">
+                <div class="password-strength-bar"></div>
+            </div>
+            <p id="realStrengthText" class="strength-text"></p>
+
             <div class="input-group">
                 <textarea id="realMessage" rows="3" placeholder="✍ Настоящее сообщение"></textarea>
                 <button class="clear-button" onclick="clearField('realMessage')">🗑️</button>
             </div>
             <h3>Сообщение-прикрытие</h3>
             <div class="input-group">
-                <input type="text" id="fakePhrase" placeholder="🔑 Фраза прикрытия" />
+                <input type="text" id="fakePhrase" placeholder="🔑 Фраза прикрытия" oninput="checkPasswordStrength('fakePhrase', 'fakeEmo', 'fakeStrengthContainer')" />
                 <button class="clear-button" onclick="clearField('fakePhrase')">🗑️</button>
             </div>
             <div class="input-group">
-                <input type="text" id="fakeEmo" placeholder="🎨 Эмо-код для прикрытия" />
+                <input type="text" id="fakeEmo" placeholder="🎨 Эмо-код для прикрытия" oninput="checkPasswordStrength('fakePhrase', 'fakeEmo', 'fakeStrengthContainer')" />
                 <button class="clear-button" onclick="clearField('fakeEmo')">🗑️</button>
             </div>
+            <div id="fakeStrengthContainer" class="password-strength-indicator">
+                <div class="password-strength-bar"></div>
+            </div>
+            <p id="fakeStrengthText" class="strength-text"></p>
             <div class="input-group">
-                <textarea id="fakeMessage" rows="3" placeholder="✍ Сообщение-прикрытие"></textarea>
+                <textarea id="fakeMessage" rows="3" placeholder="✍ Сообщение-прикрытие (должно быть достаточно длинным!)"></textarea>
                 <button class="clear-button" onclick="clearField('fakeMessage')">🗑️</button>
             </div>
-            <button onclick="encryptDual()">Зашифровать оба</button>
-            <button onclick="saveDualVault()">💾 Сохранить Vault</button>
+            <button onclick="encryptDual()">Зашифровать (получится один блок)</button>
+            <p id="dualProgress" class="status-message status-info hidden"></p>
             <div class="input-group">
-                <textarea id="dualVault" rows="7" readonly placeholder="🔐 Vault JSON"></textarea>
-                <button class="clear-button" onclick="clearField('dualVault')">🗑️</button>
+                <textarea id="dualOutput" rows="7" readonly placeholder="🔐 Зашифрованное сообщение-прикрытие (содержит скрытое!)"></textarea>
+                <button class="clear-button" onclick="clearField('dualOutput')">🗑️</button>
             </div>
             <p id="dualStatus" class="status-message"></p>
         </div>
@@ -342,7 +388,7 @@
             <div id="layerContainer"></div>
             <button onclick="addLayer()">➕ Добавить слой</button>
             <button onclick="encryptMulti()">🔐 Зашифровать все слои</button>
-            <button onclick="saveMultiVault()">💾 Сохранить Vault</button>
+            <p id="multiProgress" class="status-message status-info hidden"></p>
             <div class="input-group">
                 <textarea id="multiVault" rows="8" readonly placeholder="📦 JSON-сейф"></textarea>
                 <button class="clear-button" onclick="clearField('multiVault')">🗑️</button>
@@ -362,6 +408,7 @@
                 <button class="clear-button" onclick="clearField('inputVault')">🗑️</button>
             </div>
             <button onclick="decryptVault()">Расшифровать</button>
+            <p id="decryptProgress" class="status-message status-info hidden"></p>
             <div class="input-group">
                 <div id="decryptionResult" style="min-height: 40px;"><p>Результат расшифровки появится здесь.</p></div>
                 <button class="clear-button" onclick="clearDecryptionResult()">🗑️</button>
@@ -424,7 +471,6 @@
         const toggleTheme = () => {
             document.body.classList.toggle('dark-mode');
             localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
-            // Re-init matrix to apply new opacity immediately
             initMatrix(); // Re-initialize particles to account for potential new dimensions
             drawMatrix(); // Redraw immediately to apply new opacity
         };
@@ -444,11 +490,12 @@
         const PBKDF2_HASH_ALG = 'SHA-256';
         const KEY_LENGTH_BITS = 256; // AES-256
 
-        const displayStatus = (elementId, message, isError = false) => {
+        const displayStatus = (elementId, message, isError = false, isInfo = false) => {
             const element = document.getElementById(elementId);
             if (element) {
                 element.innerText = message;
-                element.className = `status-message ${isError ? 'status-error' : 'status-success'}`;
+                element.className = `status-message ${isError ? 'status-error' : (isInfo ? 'status-info' : 'status-success')}`;
+                if (isInfo) element.classList.remove('hidden'); else element.classList.add('hidden');
             }
         };
 
@@ -538,6 +585,95 @@
             }
         };
 
+        // --- Steganography functions (Zero-Width Characters) ---
+        // Maps 2 bits to a ZWC
+        const bitToZWC = (bit1, bit2) => {
+            if (bit1 === 0 && bit2 === 0) return '\u200b'; // Zero Width Space
+            if (bit1 === 0 && bit2 === 1) return '\u200c'; // Zero Width Non-Joiner
+            if (bit1 === 1 && bit2 === 0) return '\u200d'; // Zero Width Joiner
+            if (bit1 === 1 && bit2 === 1) return '\u200e'; // Left-to-right mark (using one more for clarity)
+            // Fallback, though should not happen with proper bit handling
+            return '\u200b'; 
+        };
+
+        // Extracts 2 bits from a ZWC
+        const zwcToBit = (char) => {
+            if (char === '\u200b') return [0, 0];
+            if (char === '\u200c') return [0, 1];
+            if (char === '\u200d') return [1, 0];
+            if (char === '\u200e') return [1, 1];
+            return null; // Not a ZWC or invalid
+        };
+
+        const encodeHiddenMessage = (carrierText, hiddenMessage) => {
+            const hiddenBytes = new TextEncoder().encode(hiddenMessage); // Get bytes of hidden message
+            let hiddenBits = '';
+            for (const byte of hiddenBytes) {
+                hiddenBits += byte.toString(2).padStart(8, '0'); // Convert each byte to 8 bits string
+            }
+
+            // Pad hidden bits to be a multiple of 2 (for ZWC encoding)
+            if (hiddenBits.length % 2 !== 0) hiddenBits += '0'; 
+
+            let zwcEncoded = '';
+            for (let i = 0; i < hiddenBits.length; i += 2) {
+                const bit1 = parseInt(hiddenBits[i]);
+                const bit2 = parseInt(hiddenBits[i + 1]);
+                zwcEncoded += bitToZWC(bit1, bit2);
+            }
+
+            // Interleave ZWC-encoded hidden message into carrierText
+            // Simple interleaving: after every N characters of carrierText, insert a ZWC block
+            // This could be made more sophisticated
+            const interleaveInterval = Math.max(1, Math.floor(carrierText.length / zwcEncoded.length));
+            let result = '';
+            let zwcIndex = 0;
+            for (let i = 0; i < carrierText.length; i++) {
+                result += carrierText[i];
+                if (i > 0 && (i + 1) % interleaveInterval === 0 && zwcIndex < zwcEncoded.length) {
+                    result += zwcEncoded[zwcIndex++];
+                }
+            }
+            // Add any remaining ZWC chars
+            result += zwcEncoded.substring(zwcIndex);
+            
+            // Add a clear "end of message" marker using ZWC sequence to know where hidden data ends
+            result += '\u200b\u200b\u200b\u200c'; // A unique sequence of ZWC to mark end of hidden message
+
+            return result;
+        };
+
+        const decodeHiddenMessage = (carrierTextWithHidden) => {
+            const zwcPattern = /[\u200b\u200c\u200d\u200e]/g;
+            const endMarker = '\u200b\u200b\u200b\u200c';
+            
+            const markerIndex = carrierTextWithHidden.indexOf(endMarker);
+            let zwcString;
+            if (markerIndex !== -1) {
+                zwcString = carrierTextWithHidden.substring(0, markerIndex).match(zwcPattern)?.join('') || '';
+            } else {
+                zwcString = carrierTextWithHidden.match(zwcPattern)?.join('') || '';
+            }
+            
+            let hiddenBits = '';
+            for (const char of zwcString) {
+                const bits = zwcToBit(char);
+                if (bits) {
+                    hiddenBits += bits[0].toString() + bits[1].toString();
+                }
+            }
+
+            // Convert bits string back to bytes
+            const bytes = [];
+            for (let i = 0; i < hiddenBits.length; i += 8) {
+                const byteStr = hiddenBits.substring(i, i + 8);
+                if (byteStr.length === 8) { // Ensure we have full bytes
+                    bytes.push(parseInt(byteStr, 2));
+                }
+            }
+            return new TextDecoder().decode(new Uint8Array(bytes));
+        };
+
         // --- UI functions ---
 
         const toggleMode = () => {
@@ -550,8 +686,65 @@
             if (mode === "multi") document.getElementById("multiSection").classList.remove("hidden");
         };
 
+        // Password strength checker
+        const checkPasswordStrength = (phraseId, emoId, strengthContainerId) => {
+            const phrase = document.getElementById(phraseId).value;
+            const emo = document.getElementById(emoId).value;
+            const combined = phrase + emo;
+
+            let strength = 0;
+            let strengthText = "";
+            let strengthClass = "";
+
+            if (combined.length < 8) {
+                strength = 0;
+                strengthText = "Очень слабый";
+                strengthClass = "weak";
+            } else if (combined.length < 12) {
+                strength = 1;
+                strengthText = "Слабый";
+                strengthClass = "weak";
+            } else if (combined.length < 16) {
+                strength = 2;
+                strengthText = "Средний";
+                strengthClass = "medium";
+            } else if (combined.length >= 16 && (/\d/.test(combined) || /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(combined))) {
+                strength = 3;
+                strengthText = "Хороший";
+                strengthClass = "strong";
+            } else if (combined.length >= 20 && (/[A-Z]/.test(combined) && /[a-z]/.test(combined) && /\d/.test(combined) && /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(combined))) {
+                strength = 4;
+                strengthText = "Очень сильный";
+                strengthClass = "strong";
+            } else {
+                 strength = 2; // Default for reasonably long but simple
+                 strengthText = "Средний";
+                 strengthClass = "medium";
+            }
+
+
+            const bar = document.querySelector(`#${strengthContainerId} .password-strength-bar`);
+            const text = document.getElementById(strengthContainerId.replace('Container', 'Text'));
+            
+            if (combined.length === 0) {
+                bar.style.width = '0%';
+                bar.style.backgroundColor = 'transparent';
+                text.innerText = 'Введите фразу и эмо-код';
+                text.className = 'strength-text';
+                document.getElementById(strengthContainerId).className = 'password-strength-indicator';
+                return;
+            }
+
+            bar.style.width = `${(strength + 1) * 25}%`; // 0-4 scale to 0-100%
+            document.getElementById(strengthContainerId).className = `password-strength-indicator strength-${strengthClass}`;
+            text.innerText = strengthText;
+            text.className = `strength-text ${strengthClass}`;
+        };
+
+
         const encryptSimple = async () => {
             displayStatus("simpleStatus", "");
+            displayStatus("simpleProgress", "Шифрование...", false, true);
             const phrase = document.getElementById("phrase").value;
             const emo = document.getElementById("emo").value;
             const msg = document.getElementById("message").value;
@@ -561,11 +754,14 @@
                 displayStatus("simpleStatus", "✅ Сообщение успешно зашифровано!", false);
             } catch (error) {
                 displayStatus("simpleStatus", error.message, true);
+            } finally {
+                displayStatus("simpleProgress", "", false, false);
             }
         };
 
         const encryptDual = async () => {
             displayStatus("dualStatus", "");
+            displayStatus("dualProgress", "Шифрование (со скрытием)...", false, true);
             const realMessage = document.getElementById("realMessage").value;
             const realPhrase = document.getElementById("realPhrase").value;
             const realEmo = document.getElementById("realEmo").value;
@@ -574,24 +770,39 @@
             const fakeEmo = document.getElementById("fakeEmo").value;
 
             try {
-                const realEncrypted = await aesEncrypt(realMessage, realPhrase, realEmo);
-                const fakeEncrypted = await aesEncrypt(fakeMessage, fakePhrase, fakeEmo);
-                const vault = { mode: "dual", real: realEncrypted, fake: fakeEncrypted };
-                document.getElementById("dualVault").value = JSON.stringify(vault, null, 2);
-                displayStatus("dualStatus", "✅ Оба сообщения успешно зашифрованы!", false);
+                // 1. Encrypt the real message
+                const realEncryptedB64 = await aesEncrypt(realMessage, realPhrase, realEmo);
+
+                // 2. Hide the real encrypted message inside the fake message
+                const carrierText = fakeMessage;
+                // Check if carrier text is long enough for hidden data
+                // Each character in realEncryptedB64 needs 4 ZWC, each ZWC takes ~1.5 carrier chars
+                // So roughly, carrierText.length must be at least (realEncryptedB64.length * 4 * 1.5)
+                if (carrierText.length < realEncryptedB64.length * 6) { // Heuristic check
+                    throw new Error("Сообщение-прикрытие слишком короткое для скрытия настоящего сообщения. Сделайте его длиннее!");
+                }
+                const fakeMessageWithHidden = encodeHiddenMessage(carrierText, realEncryptedB64);
+
+                // 3. Encrypt the fake message (which now contains the hidden message)
+                const finalEncryptedDual = await aesEncrypt(fakeMessageWithHidden, fakePhrase, fakeEmo);
+                
+                document.getElementById("dualOutput").value = finalEncryptedDual;
+                displayStatus("dualStatus", "✅ Сообщение-прикрытие (со скрытым настоящим) успешно зашифровано!", false);
             } catch (error) {
                 displayStatus("dualStatus", error.message, true);
+            } finally {
+                displayStatus("dualProgress", "", false, false);
             }
         };
 
         const saveDualVault = () => {
-            const text = document.getElementById("dualVault").value;
+            const text = document.getElementById("dualOutput").value;
             if (!text || text.trim() === "") {
                 displayStatus("dualStatus", "⚠️ Сначала зашифруйте сообщения в режиме 'С прикрытием'!", true);
                 return;
             }
-            downloadFile(text, "vault_dual.json");
-            displayStatus("dualStatus", "💾 Vault успешно сохранен!", false);
+            downloadFile(text, "secret_message.txt"); // Save as .txt, not .json, to look inconspicuous
+            displayStatus("dualStatus", "💾 Зашифрованное сообщение-прикрытие сохранено!", false);
         };
 
         const addLayer = () => {
@@ -599,23 +810,27 @@
             const div = document.createElement("div");
             div.className = "layer-item";
             div.innerHTML = `
+                <hr style="border-top: 1px solid var(--border-color); margin: 1rem 0;"/>
                 <div class="input-group">
                     <input placeholder="🔖 Название слоя" />
                     <button class="clear-button" onclick="clearLayerField(this)">🗑️</button>
                 </div>
                 <div class="input-group">
-                    <input placeholder="🔑 Фраза" />
+                    <input placeholder="🔑 Фраза" oninput="checkLayerPasswordStrength(this)" />
                     <button class="clear-button" onclick="clearLayerField(this)">🗑️</button>
                 </div>
                 <div class="input-group">
-                    <input placeholder="🎨 Эмо-код" />
+                    <input placeholder="🎨 Эмо-код" oninput="checkLayerPasswordStrength(this)" />
                     <button class="clear-button" onclick="clearLayerField(this)">🗑️</button>
                 </div>
+                <div class="password-strength-indicator">
+                    <div class="password-strength-bar"></div>
+                </div>
+                <p class="strength-text"></p>
                 <div class="input-group">
                     <textarea placeholder="✍ Сообщение" rows="3"></textarea>
                     <button class="clear-button" onclick="clearLayerField(this)">🗑️</button>
                 </div>
-                <hr style="border-top: 1px solid var(--border-color); margin: 1rem 0;"/>
             `;
             container.appendChild(div);
         };
@@ -625,11 +840,62 @@
             const inputOrTextarea = buttonElement.previousElementSibling;
             if (inputOrTextarea) {
                 inputOrTextarea.value = '';
+                // If it's a password field, reset its strength indicator
+                if (inputOrTextarea.id.includes('phrase') || inputOrTextarea.id.includes('emo')) {
+                    const parentLayer = inputOrTextarea.closest('.layer-item');
+                    if (parentLayer) {
+                        const strengthBar = parentLayer.querySelector('.password-strength-bar');
+                        const strengthText = parentLayer.querySelector('.strength-text');
+                        strengthBar.style.width = '0%';
+                        strengthBar.style.backgroundColor = 'transparent';
+                        strengthText.innerText = '';
+                        parentLayer.querySelector('.password-strength-indicator').className = 'password-strength-indicator';
+                    }
+                }
             }
         };
 
+        // Helper for multi-layer password strength
+        const checkLayerPasswordStrength = (inputElement) => {
+            const layerDiv = inputElement.closest('.layer-item');
+            const phraseInput = layerDiv.querySelector('input[placeholder*="Фраза"]');
+            const emoInput = layerDiv.querySelector('input[placeholder*="Эмо-код"]');
+            const strengthContainer = layerDiv.querySelector('.password-strength-indicator');
+            const strengthText = layerDiv.querySelector('.strength-text');
+            
+            const combined = (phraseInput ? phraseInput.value : '') + (emoInput ? emoInput.value : '');
+
+            let strength = 0;
+            let strengthMsg = "";
+            let strengthClass = "";
+
+            if (combined.length === 0) {
+                strengthMsg = "Введите фразу и эмо-код";
+                strengthClass = "";
+            } else if (combined.length < 8) {
+                strength = 0; strengthMsg = "Очень слабый"; strengthClass = "weak";
+            } else if (combined.length < 12) {
+                strength = 1; strengthMsg = "Слабый"; strengthClass = "weak";
+            } else if (combined.length < 16) {
+                strength = 2; strengthMsg = "Средний"; strengthClass = "medium";
+            } else if (combined.length >= 16 && (/\d/.test(combined) || /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(combined))) {
+                strength = 3; strengthMsg = "Хороший"; strengthClass = "strong";
+            } else if (combined.length >= 20 && (/[A-Z]/.test(combined) && /[a-z]/.test(combined) && /\d/.test(combined) && /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(combined))) {
+                strength = 4; strengthMsg = "Очень сильный"; strengthClass = "strong";
+            } else {
+                 strength = 2; strengthMsg = "Средний"; strengthClass = "medium";
+            }
+
+            strengthContainer.querySelector('.password-strength-bar').style.width = `${(strength + 1) * 25}%`;
+            strengthContainer.className = `password-strength-indicator strength-${strengthClass}`;
+            strengthText.innerText = strengthMsg;
+            strengthText.className = `strength-text ${strengthClass}`;
+        };
+
+
         const encryptMulti = async () => {
             displayStatus("multiStatus", "");
+            displayStatus("multiProgress", "Шифрование всех слоёв...", false, true);
             const layers = document.querySelectorAll("#layerContainer > div.layer-item");
             if (layers.length === 0) {
                 displayStatus("multiStatus", "⚠️ Добавьте хотя бы один слой!", true);
@@ -663,6 +929,7 @@
             }
             document.getElementById("multiVault").value = JSON.stringify({ mode: "multi", layers: result }, null, 2);
             displayStatus("multiStatus", "✅ Все слои успешно зашифрованы!", false);
+            displayStatus("multiProgress", "", false, false);
         };
 
         const saveMultiVault = () => {
@@ -671,81 +938,103 @@
                 displayStatus("multiStatus", "⚠️ Сначала зашифруйте сообщения в режиме 'Многоуровневый сейф'!", true);
                 return;
             }
-            downloadFile(text, "vault_multi.json");
+            downloadFile(text, "multi_vault.json");
             displayStatus("multiStatus", "💾 Vault успешно сохранен!", false);
         };
 
         const decryptVault = async () => {
-            displayStatus("qrStatus", "");
-            document.getElementById("decryptionResult").innerHTML = "<p>Результат расшифровки появится здесь.</p>";
+            displayStatus("qrStatus", ""); // Clear QR status
+            displayStatus("decryptProgress", "Дешифрование...", false, true);
+            document.getElementById("decryptionResult").innerHTML = "<p>Результат расшифровки появится здесь.</p>"; // Clear previous result
             const inputVaultText = document.getElementById("inputVault").value;
 
             if (!inputVaultText.trim()) {
                 document.getElementById("decryptionResult").innerHTML = "<p class='status-error'>⚠️ Поле для Vault не может быть пустым.</p>";
+                displayStatus("decryptProgress", "", false, false);
                 return;
             }
 
             let vault;
+            let output = "";
             try {
+                // Try to parse as JSON first
                 vault = JSON.parse(inputVaultText);
-            } catch (e) {
-                // Not a JSON, try to decrypt as simple encrypted text
-                const phrase = prompt("🔑 Введите нейрофразу для расшифровки:");
-                if (phrase === null) { document.getElementById("decryptionResult").innerHTML = "<p>Отменено.</p>"; return; }
-                const emo = prompt("🎨 Введите эмо-код для расшифровки:");
-                if (emo === null) { document.getElementById("decryptionResult").innerHTML = "<p>Отменено.</p>"; return; }
 
-                const decrypted = await aesDecrypt(inputVaultText, phrase, emo);
-                const isError = decrypted.startsWith("⛔");
-                document.getElementById("decryptionResult").innerHTML = `<p class="${isError ? 'status-error' : 'status-success'}">${isError ? decrypted : `🔒 Расшифрованное сообщение:\n\n${decrypted}`}</p>`;
-                if (document.getElementById("autoDelete").checked && !isError) {
+                if (vault.mode === "dual") {
+                    // This is the new, steganographic dual mode
+                    const phrase = prompt("🔑 Введите нейрофразу для прикрытия:");
+                    if (phrase === null) { output = "<p>Отменено.</p>"; throw new Error("cancelled"); }
+                    const emo = prompt("🎨 Введите эмо-код для прикрытия:");
+                    if (emo === null) { output = "<p>Отменено.</p>"; throw new Error("cancelled"); }
+
+                    const decryptedFake = await aesDecrypt(inputVaultText, phrase, emo);
+                    if (decryptedFake.startsWith("⛔")) {
+                        output = `<p class='status-error'>${decryptedFake}</p>`; // Failed to decrypt fake message
+                    } else {
+                        // Successfully decrypted fake message, now try to extract and decrypt real
+                        const extractedRealEncryptedB64 = decodeHiddenMessage(decryptedFake);
+                        if (extractedRealEncryptedB64 && extractedRealEncryptedB64.length > 32) { // Check if something looks like encrypted data was extracted
+                             const realPhrase = prompt("🔑 Найден скрытый слой! Введите НАСТОЯЩУЮ нейрофразу:");
+                             if (realPhrase === null) { output = "<p>Отменено.</p>"; throw new Error("cancelled"); }
+                             const realEmo = prompt("🎨 Введите НАСТОЯЩИЙ эмо-код:");
+                             if (realEmo === null) { output = "<p>Отменено.</p>"; throw new Error("cancelled"); }
+
+                             const realDecrypted = await aesDecrypt(extractedRealEncryptedB64, realPhrase, realEmo);
+                             if (!realDecrypted.startsWith("⛔")) {
+                                 output = `<p class='status-success'>✅ **Настоящее сообщение:**\n${realDecrypted}</p>`;
+                             } else {
+                                 output = `<p class='status-error'>⛔ **Неверная нейрофраза/эмо-код для настоящего сообщения.**</p><p class='status-info'>Возможно, это было сообщение-прикрытие: \n${decryptedFake}</p>`;
+                             }
+                        } else {
+                            output = `<p class='status-success'>🎭 **Это было сообщение-прикрытие:**\n${decryptedFake}</p><p class='status-info'>Скрытых данных не найдено или они повреждены.</p>`;
+                        }
+                    }
+
+                } else if (vault.mode === "multi") {
+                    if (!Array.isArray(vault.layers)) {
+                        output = "<p class='status-error'>⛔ Некорректный формат Vault для многоуровневого сейфа.</p>";
+                        throw new Error("Invalid multi vault format");
+                    }
+                    let allLayersOutput = "";
+                    for (const layer of vault.layers) {
+                        allLayersOutput += `\n--- 🔒 **${layer.label || 'Неизвестный слой'}** ---\n`;
+                        const phrase = prompt(`🔑 Введите нейрофразу для слоя: "${layer.label || 'Неизвестный слой'}"`);
+                        if (phrase === null) { allLayersOutput += "Отменено.\n"; break; }
+                        const emo = prompt(`🎨 Введите эмо-код для слоя: "${layer.label || 'Неизвестный слой'}"`);
+                        if (emo === null) { allLayersOutput += "Отменено.\n"; break; }
+                        allLayersOutput += await aesDecrypt(layer.token, phrase, emo) + "\n";
+                    }
+                    output = `<p>${allLayersOutput}</p>`;
+
+                } else {
+                     output = "<p class='status-error'>⛔ Неизвестный режим Vault или поврежденный JSON. Попробуйте ввести как обычный зашифрованный текст.</p>";
+                     throw new Error("Unknown vault mode");
+                }
+            } catch (e) {
+                if (e.message === "cancelled") {
+                     // Do nothing, output already set to "Отменено"
+                } else {
+                    // If JSON parsing failed or mode was unknown, try as simple encrypted text
+                    const phrase = prompt("🔑 Введите нейрофразу для расшифровки:");
+                    if (phrase === null) { output = "<p>Отменено.</p>"; }
+                    else {
+                        const emo = prompt("🎨 Введите эмо-код для расшифровки:");
+                        if (emo === null) { output = "<p>Отменено.</p>"; }
+                        else {
+                            const decrypted = await aesDecrypt(inputVaultText, phrase, emo);
+                            const isError = decrypted.startsWith("⛔");
+                            output = `<p class="${isError ? 'status-error' : 'status-success'}">${isError ? decrypted : `🔒 Расшифрованное сообщение:\n\n${decrypted}`}</p>`;
+                        }
+                    }
+                }
+            } finally {
+                document.getElementById("decryptionResult").innerHTML = output;
+                const isDecryptionSuccessful = !(output.includes("⛔") || output.includes("Отменено"));
+                if (document.getElementById("autoDelete").checked && isDecryptionSuccessful) {
                     clearField('inputVault');
                     document.getElementById("vaultLoader").value = "";
                 }
-                return;
-            }
-
-            let output = "";
-
-            if (vault.mode === "dual") {
-                const phrase = prompt("🔑 Введите нейрофразу:");
-                if (phrase === null) { document.getElementById("decryptionResult").innerHTML = "<p>Отменено.</p>"; return; }
-                const emo = prompt("🎨 Введите эмо-код:");
-                if (emo === null) { document.getElementById("decryptionResult").innerHTML = "<p>Отменено.</p>"; return; }
-
-                let realDecrypted = await aesDecrypt(vault.real, phrase, emo);
-                if (!realDecrypted.startsWith("⛔")) {
-                    output = `✅ **Настоящее сообщение:**\n${realDecrypted}`;
-                } else {
-                    let fakeDecrypted = await aesDecrypt(vault.fake, phrase, emo);
-                    if (!fakeDecrypted.startsWith("⛔")) {
-                        output = `🎭 **Сообщение-прикрытие:**\n${fakeDecrypted}`;
-                    } else {
-                        output = `⛔ **Неверная нейрофраза/эмо-код для обоих сообщений.**`;
-                    }
-                }
-            } else if (vault.mode === "multi") {
-                if (!Array.isArray(vault.layers)) {
-                    document.getElementById("decryptionResult").innerHTML = "<p class='status-error'>⛔ Некорректный формат Vault для многоуровневого сейфа.</p>";
-                    return;
-                }
-                for (const layer of vault.layers) {
-                    output += `\n--- 🔒 **${layer.label || 'Неизвестный слой'}** ---\n`;
-                    const phrase = prompt(`🔑 Введите нейрофразу для слоя: "${layer.label || 'Неизвестный слой'}"`);
-                    if (phrase === null) { output += "Отменено.\n"; break; }
-                    const emo = prompt(`🎨 Введите эмо-код для слоя: "${layer.label || 'Неизвестный слой'}"`);
-                    if (emo === null) { output += "Отменено.\n"; break; }
-                    output += await aesDecrypt(layer.token, phrase, emo) + "\n";
-                }
-            } else {
-                 document.getElementById("decryptionResult").innerHTML = "<p class='status-error'>⛔ Неизвестный режим Vault или поврежденный JSON. Попробуйте ввести как обычный зашифрованный текст.</p>";
-                 return;
-            }
-
-            document.getElementById("decryptionResult").innerHTML = `<p>${output}</p>`;
-            if (document.getElementById("autoDelete").checked && !output.includes("⛔")) { // Only clear if decryption was successful
-                clearField('inputVault');
-                document.getElementById("vaultLoader").value = "";
+                displayStatus("decryptProgress", "", false, false);
             }
         };
 
@@ -779,7 +1068,8 @@
             e.preventDefault();
             e.stopPropagation();
             const file = e.dataTransfer.files[0];
-            if (file && file.type.includes("json")) {
+            // Allow any file type for drop, as encrypted data might not be JSON
+            if (file) { 
                 const reader = new FileReader();
                 reader.onload = (ev) => {
                     document.getElementById("inputVault").value = ev.target.result;
@@ -790,7 +1080,7 @@
                 };
                 reader.readAsText(file);
             } else {
-                displayStatus("qrStatus", "⚠️ Пожалуйста, перетащите файл в формате .json", true);
+                displayStatus("qrStatus", "⚠️ Пожалуйста, перетащите файл.", true);
             }
         };
 
@@ -848,8 +1138,18 @@
         const clearField = (fieldId) => {
             document.getElementById(fieldId).value = '';
             // Clear associated status message if any
-            const statusElement = document.getElementById(fieldId + 'Status');
+            const statusElement = document.getElementById(fieldId.replace('Progress', 'Status')); // Adjust for progress IDs
             if (statusElement) statusElement.innerText = '';
+            
+            // For password fields, reset strength indicator
+            if (fieldId === 'phrase' || fieldId === 'emo' || fieldId === 'realPhrase' || fieldId === 'realEmo' || fieldId === 'fakePhrase' || fieldId === 'fakeEmo') {
+                 const phraseId = fieldId.includes('phrase') ? fieldId : fieldId.replace('emo', 'phrase');
+                 const emoId = fieldId.includes('emo') ? fieldId : fieldId.replace('phrase', 'emo');
+                 const strengthContainerId = fieldId.replace('phrase', 'StrengthContainer').replace('emo', 'StrengthContainer');
+                 if (document.getElementById(strengthContainerId)) { // Check if exists
+                     checkPasswordStrength(phraseId, emoId, strengthContainerId);
+                 }
+            }
         };
 
         const clearDecryptionResult = () => {
@@ -861,6 +1161,9 @@
             toggleMode();
             addLayer();
             // Trigger matrix redraw on initial load to ensure correct opacity is applied from theme
+            checkPasswordStrength('phrase', 'emo', 'simpleStrengthContainer');
+            checkPasswordStrength('realPhrase', 'realEmo', 'realStrengthContainer');
+            checkPasswordStrength('fakePhrase', 'fakeEmo', 'fakeStrengthContainer');
             initMatrix();
             drawMatrix();
         });
